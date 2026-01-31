@@ -5,10 +5,13 @@ function PrintPage() {
   const [message, setMessage] = useState("");
 
   const verifyCode = async () => {
-    const res = await fetch("https://backend-server-9jix.onrender.com/verify-order", {
+    const res = await fetch("https://backend-server-9jix.onrender.com/create-order", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code }),
+      body: JSON.stringify({ 
+        totalAmount:totalPrice,
+        paidAmount:totalPrice ,
+       }),
     });
 
     const data = await res.json();
