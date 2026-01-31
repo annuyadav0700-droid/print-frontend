@@ -5,7 +5,7 @@ import pdfWorker from "pdfjs-dist/build/pdf.worker.entry";
 // ✅ PDF.js worker setup (Render friendly)
 pdfjsLib.GlobalWorkerOptions.workerSrc = 
 pdfWorker;
-  
+import PrintPage from "./PrintPage";
 
 function App() {
   const [file, setFile] = useState(null);
@@ -47,6 +47,7 @@ function App() {
 
     return totalPages * pricePerPage;
   };
+  return<PrintPage/>;
 
   // 💳 Load Razorpay script
   const loadRazorpay = () => {
