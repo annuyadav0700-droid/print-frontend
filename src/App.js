@@ -1,17 +1,23 @@
 import React, { useState } from "react";
-import * as pdfjsLib from "pdfjs-dist";
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+import * as pdfjsLib from "pdfjs-dist/build/pdf";
+import pdfWorker from "pdfjs-dist/build/pdf.worker.entry";
+
+// ✅ PDF.js worker setup (Render friendly)
+pdfjsLib.GlobalWorkerOptions.workerSrc = 
+pdfWorker;
+  
 
 function App() {
-  const backendURL = "https://backend-server-9jix.onrender.com"; // ✅ Your live backend URL
   const [file, setFile] = useState(null);
   const [pages, setPages] = useState(0);
   const [copies, setCopies] = useState(1);
   const [colorType, setColorType] = useState("bw");
   const [side, setSide] = useState("single");
   const [orderCode, setOrderCode] = useState("");
+  const pricePerPage= colorType === "color" ? 5:10;
+  const totalPrice = pages*copies*pricePerPage;
 
-  // 📄 Handle File Upload
+  // 📄 Handle file upload
   const handleFileChange = async (e) => {
     const selected = e.target.files[0];
     if (!selected) return;
@@ -30,17 +36,19 @@ function App() {
     }
   };
 
-  // 💰 Price Calculation
+  // 💰 Price calculation
   const getPrice = () => {
     let pricePerPage = colorType === "bw" ? 5 : 10;
     let totalPages = pages * copies;
+
     if (side === "double") {
       totalPages = Math.ceil(totalPages / 2);
     }
+
     return totalPages * pricePerPage;
   };
 
-  // 💳 Razorpay Payment
+  // 💳 Load Razorpay script
   const loadRazorpay = () => {
     return new Promise((resolve) => {
       const script = document.createElement("script");
@@ -51,43 +59,41 @@ function App() {
     });
   };
 
+  // 💳 Handle payment
   const handlePayment = async () => {
-    if (!file || pages === 0) {
-      alert("Please upload a file first!");
-      return;
-    }
-
     const res = await loadRazorpay();
     if (!res) {
-      alert("Razorpay SDK failed to load.");
+      alert("Razorpay SDK failed to load");
       return;
     }
 
-    try {
-      // Step 1: Create order in backend
-      const orderResponse = await fetch(`${backendURL}/create-order`, {
+    // Create order on backend
+    const orderRes = await fetch(
+      "https://backend-server-9jix.onrender.com/create-order",
+      {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ amount: getPrice() }),
-      });
-      const orderData = await orderResponse.json();
-
-      if (!orderData.success) {
-        alert("Order creation failed!");
-        return;
       }
+    );
 
-      // Step 2: Razorpay options
-      const options = {
-        key: "rzp_live_S86JCGSl30lgly", // ✅ Replace with your Razorpay key
-        amount: getPrice() * 100, // in paise
-        currency: "INR",
-        name: "Print Service",
-        description: `${pages} pages, ${copies} copies`,
-        order_id: orderData.orderId,
-        handler: async function (response) {
-          // Step 3: Verify payment with backend
-          const verifyRes = await fetch(`${backendURL}/verify-payment`, {
+    const orderData = await orderRes.json();
+    if (!orderData.success) {
+      alert("Order creation failed");
+      return;
+    }
+
+    const options = {
+      key: process.env.REACT_APP_RAZORPAY_KEY_ID, // from .env
+      amount: getPrice() * 100,
+      currency: "INR",
+      name: "Print Service",
+      description: "Printing Payment",
+      order_id: orderData.orderId,
+      handler: async function (response) {
+        const verifyRes = await fetch(
+          "https://backend-server-9jix.onrender.com/verify-payment",
+          {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -95,28 +101,25 @@ function App() {
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
             }),
-          });
-
-          const verifyData = await verifyRes.json();
-          if (verifyData.success) {
-            setOrderCode(verifyData.code); // ✅ backend se 6 digit code
-          } else {
-            alert("Payment verification failed");
           }
-        },
-        prefill: {
-          name: "Customer",
-          email: "test@test.com",
-        },
-        theme: { color: "#3399cc" },
-      };
+        );
 
-      const paymentObject = new window.Razorpay(options);
-      paymentObject.open();
-    } catch (error) {
-      console.error("Payment Error:", error);
-      alert("Payment failed. Check console for details.");
-    }
+        const data = await verifyRes.json();
+        if (data.success) {
+          setOrderCode(data.code || "Your order is successful!"); // backend se code
+        } else {
+          alert("Payment verification failed");
+        }
+      },
+      prefill: {
+        name: "Customer",
+        email: "test@test.com",
+      },
+      theme: { color: "#3399cc" },
+    };
+
+    const paymentObject = new window.Razorpay(options);
+    paymentObject.open();
   };
 
   return (
@@ -128,6 +131,7 @@ function App() {
         accept="application/pdf,image/*"
         onChange={handleFileChange}
       />
+
       <br />
       <br />
 
@@ -140,6 +144,7 @@ function App() {
         value={copies}
         onChange={(e) => setCopies(Number(e.target.value))}
       />
+
       <br />
       <br />
 
@@ -164,9 +169,7 @@ function App() {
       <h3>Total Price: ₹{getPrice()}</h3>
 
       {orderCode && (
-        <h2 style={{ color: "green" }}>
-          Your Order Code : {orderCode}
-        </h2>
+        <h2 style={{ color: "green" }}>Your Order Code: {orderCode}</h2>
       )}
 
       <button onClick={handlePayment} disabled={pages === 0}>
