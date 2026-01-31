@@ -1,11 +1,12 @@
 import React, { useState } from "react";
 import * as pdfjsLib from "pdfjs-dist/build/pdf";
 import pdfWorker from "pdfjs-dist/build/pdf.worker.entry";
+import PrintPage from "./PrintPage";
 
 // ✅ PDF.js worker setup (Render friendly)
 pdfjsLib.GlobalWorkerOptions.workerSrc = 
 pdfWorker;
-import PrintPage from "./PrintPage";
+
 
 function App() {
   const [file, setFile] = useState(null);
