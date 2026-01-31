@@ -1,8 +1,6 @@
 import React, { useState } from "react";
 import * as pdfjsLib from "pdfjs-dist";
-import PDFWorker from "pdfjs-dist/build/pdf.worker.entry";
-
-pdfjsLib.GlobalWorkerOptions.workerSrc = PDFWorker;
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 function App() {
   const backendURL = "https://backend-server-9jix.onrender.com"; // ✅ Your live backend URL
