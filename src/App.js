@@ -51,46 +51,55 @@ function App() {
   
   // 💳 Handle Payment
   const handlePayment = async () => {
+    try{
     const pricePerPage = 5;
     const totalPrice = pages*pricePerPage;
-    const ok = await loadRazorpay(); 
-    if (!ok) return alert("Razorpay load failed");
+
+    
     const res = await fetch("https://backend-server-9jix.onrender.com/create-order",{
       method : "POST",
       headers : {"Content-Type": "application/json"},
       body: JSON.stringify({amount:totalPrice}),
     });
     const data = await res.json();
+    if (!data.success) {alert("Order creation failed");return;
+
+    }
 
       // 2️⃣ Razorpay options
       const options = {
         key: "rzp_live_S86JCGSl30lgly", // 🔑 apni live key
-        amount: data.order.amount,
+        amount: data.amount,
         currency: "INR",
         name: "Print Service",
         description: "Document Printing",
-        order_id: data.order.id,
+        order_id: data.orderid,
         handler: async function (response) {
-          const verify = await fetch("https://backend-server-9jix.onrender.com/verify-payment",{
+          await fetch("https://backend-server-9jix.onrender.com/verify-payment",{
             method: "POST",
             headers: {"Content-Type":"application/json"},
             body: JSON.stringify(response),
           });
-          const result = await verify.json();
-          if (result.success) {
-          alert("Payment Successful ✅Code:"+ result.orderCode);
-          } else {
-            alert("Payment verification failed");
-          }
-        },
+          
+          alert("Payment Successful ✅");
+          } ,
+          theme : { color:"#3399cc"}
+        };
+          
+          
+         
       
 
           
-      };
+      
 
       // 3️⃣ Open Razorpay popup
       const rzp = new window.Razorpay(options);
       rzp.open();
+    } catch (err) {
+      console.log (err);
+      alert("Payment failed");
+    }
     
   };
 
