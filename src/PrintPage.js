@@ -14,11 +14,13 @@ function PrintPage() {
   const handlePayment = async () => {
     try {
       // 1️⃣ Create order from backend
-      const res = await fetch("https://backend-server-9jix.onrender.com//create-order", {
+      const res = await fetch("https://backend-server-9jix.onrender.com/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ amount: totalPrice }),
       });
+      const orderData = await orderRes.json();
+      console.log("ORDER DATA:",orderData);
 
       const data = await res.json();
 
@@ -33,7 +35,7 @@ function PrintPage() {
 
         handler: async function (response) {
           // 3️⃣ Verify payment
-          await fetch("https://backend-server-9jix.onrender.com//verify-payment", {
+          await fetch("https://backend-server-9jix.onrender.com/verify-payment", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(response),
