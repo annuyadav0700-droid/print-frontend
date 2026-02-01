@@ -51,12 +51,14 @@ function App() {
   
   // 💳 Handle Payment
   const handlePayment = async () => {
-    const ok = await loadRazorpay();
+    const pricePerPage = 5;
+    const totalPrice = pages*pricePerPage;
+    const ok = await loadRazorpay(); 
     if (!ok) return alert("Razorpay load failed");
     const res = await fetch("https://backend-server-9jix.onrender.com/create-order",{
       method : "POST",
       headers : {"Content-Type": "application/json"},
-      body: JSON.stringify({amount:price}),
+      body: JSON.stringify({amount:totalPrice}),
     });
     const data = await res.json();
 
