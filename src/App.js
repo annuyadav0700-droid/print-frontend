@@ -54,6 +54,7 @@ function App() {
     try{
     const pricePerPage = 5;
     const totalPrice = pages*pricePerPage;
+    const  price =500;
 
     
     const res = await fetch("https://backend-server-9jix.onrender.com/create-order",{
@@ -71,7 +72,7 @@ function App() {
         key: "rzp_live_S86JCGSl30lgly", // 🔑 apni live key
         amount: data.amount,
         currency: "INR",
-        name: "Print Service",
+        name: "A4Station",
         description: "Document Printing",
         order_id: data.orderid,
         handler: async function (response) {
