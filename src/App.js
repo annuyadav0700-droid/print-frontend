@@ -16,10 +16,10 @@ function App() {
   const bwPrice = 5;
   const colorPrice = 10;
 
-  
+  const pricePerPage =  printType === "color" ? colorPrice : bwPrice;
 
   // 💰 Total calculation
-  const totalAmount = Number(pages) * Number(copies) * printType === "color" ? colorPrice : bwPrice;
+  const totalAmount = Number(pages) * Number(copies) * pricePerPage;
 
   // FILE UPLOAD
   const handleFileChange = async (e) => {
