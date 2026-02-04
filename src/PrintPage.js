@@ -1,56 +1,46 @@
 import React, { useState } from "react";
+import axios from "axios";
 
-function PrintPage() {
-  const [file, setFile] = useState(null);
+export default function PrintPage() {
+  const [file, setFile] = useState([]);
   const [pages, setPages] = useState(1);
+  const [orderCode, setOrderCode] = useState("");
   const pricePerPage = 5;
 
   const totalPrice = pages * pricePerPage;
 
   const handleFileChange = (e) => {
-    setFile(e.target.files[0]);
+    setFile([e.target.files].slice(0,20));
   };
 
   const handlePayment = async () => {
     try {
       // 1️⃣ Create order from backend
-      const res = await fetch("https://backend-server-9jix.onrender.com/create-order", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: totalPrice }),
+      const res = await axios.post("https://backend-server-9jix.onrender.com/create-order", {
+        amount: total*100,
+        
       });
-      const orderData = await orderRes.json();
-      console.log("ORDER DATA:",orderData);
-
-      const data = await res.json();
-
+      const {orderId, orderCode} = res.data;
+      setOrderCode(orderCode);
       // 2️⃣ Razorpay payment
       const options = {
         key: "rzp_live_S86JCGSl30lgly",
         amount: totalPrice * 100,
         currency: "INR",
-        name: "Print Service",
-        description: "Document Printing",
+        name: "A4station",
+        
         order_id: data.orderId,
 
-        handler: async function (response) {
-          // 3️⃣ Verify payment
-          await fetch("https://backend-server-9jix.onrender.com/verify-payment", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(response),
-          });
-
-          // 4️⃣ Generate 6 digit code
-          const code = Math.floor(100000 + Math.random() * 900000);
-
-          alert("Payment Successful 🎉\nYour Print Code: " + code);
+        handler:  function (response) {
+          alert("Payment Successfull");
+          console.log(response);
         },
 
         theme: { color: "#3399cc" },
       };
 
-      const rzp = new window.Razorpay(options);
+      const rzp = new 
+      window.Razorpay(options);
       rzp.open();
 
     } catch (err) {
@@ -61,23 +51,31 @@ function PrintPage() {
 
   return (
     <div style={{ textAlign: "center", marginTop: "40px" }}>
-      <h2>📄 Print Service</h2>
+      <h2>📄 Print Your Files</h2>
 
-      <input type="file" onChange={handleFileChange} /><br /><br />
+      <input type="file" multiple 
+      onChange={handleFileChange} />
+      <p>Files Selected:{files.length}</p>
 
-      <label>Number of Pages: </label>
+      
       <input
         type="number"
+        placeholder="Enter Pages"
         value={pages}
-        min="1"
+        
         onChange={(e) => setPages(e.target.value)}
-      /><br /><br />
-
+      />
       <h3>Total Price: ₹{totalPrice}</h3>
 
-      <button onClick={handlePayment}>Pay & Print</button>
+      <button onClick={handlePayment}>Pay & Generate Order Code</button>
+      {orderCode && (
+        <div style={{marginTop:"20px"}}>
+          <h2> Order Code: {orderCode}</h2>
+          <p>Enter this Code on the kiosk to print</p>
+          </div>
+      )}
     </div>
   );
 }
 
-export default PrintPage;
+

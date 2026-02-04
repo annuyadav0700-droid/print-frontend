@@ -1,152 +1,148 @@
 import React, { useState } from "react";
+import axios from "axios";
+import * as pdfjsLib from "pdfjs-dist";
 
-
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.js`;
 
 function App() {
-  const [file, setFile] = useState(null);
+  const [files, setFiles] = useState([]);
   const [pages, setPages] = useState(0);
   const [copies, setCopies] = useState(1);
-  const [colorType, setColorType] = useState("bw");
-  const [side, setSide] = useState("single");
+  const [printType, setPrintType] = useState("bw");
+  const [paid, setPaid] = useState(false);
+  const [printCode, setPrintCode] = useState("");
 
-  // 📄 File Upload
+  // FILE UPLOAD
   const handleFileChange = async (e) => {
-    const selected = e.target.files[0];
-    if (!selected) return;
-    setFile(selected);
+    const uploadedFiles = Array.from(e.target.files).slice(0, 20);
+    setFiles(uploadedFiles);
 
-    if (selected.type.startsWith("image/")) {
-      setPages(1);
-    } else if (selected.type === "application/pdf") {
-      const reader = new FileReader();
-      reader.onload = async function () {
-        const typedarray = new Uint8Array(this.result);
-        const pdf = await pdfjsLib.getDocument(typedarray).promise;
-        setPages(pdf.numPages);
-      };
-      reader.readAsArrayBuffer(selected);
+    let totalPages = 0;
+
+    for (let file of uploadedFiles) {
+      if (file.type === "application/pdf") {
+        const reader = new FileReader();
+        reader.readAsArrayBuffer(file);
+
+        await new Promise((resolve) => {
+          reader.onload = async () => {
+            const pdf = await pdfjsLib.getDocument({ data: reader.result }).promise;
+            totalPages += pdf.numPages;
+            resolve();
+          };
+        });
+      } else {
+        totalPages += 1;
+      }
     }
+
+    setPages(totalPages);
   };
 
-  // 💰 Price Calculation
-  const getPrice = () => {
-    let pricePerPage = colorType === "bw" ? 5 : 10;
-    let totalPages = pages * copies;
-    if (side === "double") totalPages = Math.ceil(totalPages / 2);
-    return totalPages * pricePerPage;
-  };
-
-  const loadRazorpay = () => {
-    return new Promise((resolve) => {
-      const script =
-      document.createElement("script");
-      script.src =
-      `https://checkout.razorpay.com/v1/checkout.js`;
-      script.onload = () => resolve (true);
-      script.onerror = () =>
-        resolve(false);
-      document.body.appendChild(script);
-    });
-  };
-  
-  // 💳 Handle Payment
   const handlePayment = async () => {
-    try{
-    const pricePerPage = 5;
-    const totalPrice = pages*pricePerPage;
-    const  price =500;
+  if (!pages || !copies) {
+    alert("Enter pages and copies");
+    return;
+  }
 
-    
-    const res = await fetch("https://backend-server-9jix.onrender.com/create-order",{
-      method : "POST",
-      headers : {"Content-Type": "application/json"},
-      body: JSON.stringify({amount:totalPrice}),
+  // 🎨 Prices
+  const bwPrice = 5;
+  const colorPrice = 10;
+
+  // 🧮 Decide price per page
+  const pricePerPage = printType === "color" ? colorPrice : bwPrice;
+
+  // 💰 Total calculation
+  const totalAmount = Number(pages) * Number(copies) * pricePerPage;
+
+  console.log("Pages:", pages);
+  console.log("Copies:", copies);
+  console.log("Type:", printType);
+  console.log("Total ₹:", totalAmount);
+  console.log("Sending to backend:", totalAmount * 100);
+
+  try {
+    const res = await axios.post("https://backend-server-9jix.onrender.com/create-order", {
+      amount: totalAmount * 100, // 🔥 Razorpay wants paise
     });
-    const data = await res.json();
-    if (!data.success) {alert("Order creation failed");return;
 
-    }
+    const order = res.data;
 
-      // 2️⃣ Razorpay options
-      const options = {
-        key: "rzp_live_S86JCGSl30lgly", // 🔑 apni live key
-        amount: data.amount,
-        currency: "INR",
-        name: "A4Station",
-        description: "Document Printing",
-        order_id: data.orderid,
-        handler: async function (response) {
-          await fetch("https://backend-server-9jix.onrender.com/verify-payment",{
-            method: "POST",
-            headers: {"Content-Type":"application/json"},
-            body: JSON.stringify(response),
-          });
-          
-          alert("Payment Successful ✅");
-          } ,
-          theme : { color:"#3399cc"}
-        };
-          
-          
-         
-      
+    const options = {
+      key: "rzp_live_S86JCGSl30lgly",
+      amount: order.amount,
+      currency: "INR",
+      name: "A4Station",
+      description: "Printing Payment",
+      order_id: order.id,
+      handler: function (response) {
+        console.log(response);
+        setPaymentSuccess(true);
+        generateCode(); // your 6 digit print code
+      },
+      theme: { color: "#3399cc" },
+    };
 
-          
-      
+    const rzp = new window.Razorpay(options);
+    rzp.open();
 
-      // 3️⃣ Open Razorpay popup
-      const rzp = new window.Razorpay(options);
-      rzp.open();
-    } catch (err) {
-      console.log (err);
-      alert("Payment failed");
-    }
-    
-  };
-
+  } catch (err) {
+    console.log(err);
+    alert("Payment failed");
+  }
+};
   return (
-    <div style={{ textAlign: "center", marginTop: "40px" }}>
-      <h2>🖨️ Print Service</h2>
+    <div style={{ textAlign: "center", padding: "30px" }}>
+      {!paid ? (
+        <>
+          <h1>A4Station Print</h1>
 
-      <input type="file" accept="application/pdf,image/*" onChange={handleFileChange} />
+          <input type="file" multiple accept=".pdf,image/*" onChange={handleFileChange} />
 
-      <br /><br />
+          <h3>Total Pages: {pages}</h3>
 
-      <h3>Detected Pages: {pages}</h3>
+          <label>Copies: </label>
+          <input
+            type="number"
+            min="1"
+            value={copies}
+            onChange={(e) => setCopies(e.target.value)}
+          />
 
-      Copies:
-      <input
-        type="number"
-        min="1"
-        value={copies}
-        onChange={(e) => setCopies(Number(e.target.value))}
-      />
+          <br /><br />
 
-      <br /><br />
+          <button onClick={() => setPrintType("bw")} style={btn}>B/W ₹5</button>
+          <button onClick={() => setPrintType("color")} style={btn}>Color ₹10</button>
 
-      Color:
-      <select value={colorType} onChange={(e) => setColorType(e.target.value)}>
-        <option value="bw">Black & White</option>
-        <option value="color">Color</option>
-      </select>
+          <h2>Total Amount: ₹{totalAmount}</h2>
 
-      <br /><br />
-
-      Side:
-      <select value={side} onChange={(e) => setSide(e.target.value)}>
-        <option value="single">Single</option>
-        <option value="double">Double</option>
-      </select>
-
-      <h3>Total Price: ₹{getPrice()}</h3>
-
-      <br />
-
-      <button onClick={handlePayment} disabled={pages === 0}>
-        Pay Now
-      </button>
+          {files.length > 0 && (
+            <button onClick={handlePayment} style={payBtn}>
+              Pay & Print
+            </button>
+          )}
+        </>
+      ) : (
+        <div>
+          <h2>✅ Payment Successful</h2>
+          <h1>Your Print Code</h1>
+          <h1 style={{ color: "green", fontSize: "50px" }}>{printCode}</h1>
+          <p>Enter this code on A4Station Kiosk Screen</p>
+        </div>
+      )}
     </div>
   );
 }
+
+const btn = { padding: "10px", margin: "10px" };
+const payBtn = {
+  padding: "12px 25px",
+  fontSize: "18px",
+  background: "green",
+  color: "white",
+  border: "none",
+  borderRadius: "5px",
+};
 
 export default App;
