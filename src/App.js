@@ -12,6 +12,14 @@ function App() {
   const [printType, setPrintType] = useState("bw");
   const [paid, setPaid] = useState(false);
   const [printCode, setPrintCode] = useState("");
+// 🎨 Prices
+  const bwPrice = 5;
+  const colorPrice = 10;
+
+  
+
+  // 💰 Total calculation
+  const totalAmount = Number(pages) * Number(copies) * printType === "color" ? colorPrice : bwPrice;
 
   // FILE UPLOAD
   const handleFileChange = async (e) => {
@@ -46,16 +54,7 @@ function App() {
     return;
   }
 
-  // 🎨 Prices
-  const bwPrice = 5;
-  const colorPrice = 10;
-
-  // 🧮 Decide price per page
-  const pricePerPage = printType === "color" ? colorPrice : bwPrice;
-
-  // 💰 Total calculation
-  const totalAmount = Number(pages) * Number(copies) * pricePerPage;
-
+  
   console.log("Pages:", pages);
   console.log("Copies:", copies);
   console.log("Type:", printType);
