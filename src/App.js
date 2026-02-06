@@ -51,7 +51,7 @@ function App() {
  const handlePayment = async (totalAmount) => {
   try {
     // 1️⃣ Create Order via backend
-    const {data} = await axios.post(
+    const res = await axios.post(
       "https://backend-server-9jix.onrender.com/create-order",
       { pages: Number(pages),
         copies: Number(copies),
@@ -131,8 +131,10 @@ function App() {
           <h2>Total Amount: ₹{totalAmount}</h2>
 
           {files.length > 0 && (
-            <button onClick={handlePayment} style={payBtn}>
-              Pay & Print
+            <button onClick={()=>
+              handlePayment(totalAmount)
+            }>
+              Pay Now
             </button>
           )}
         </>
