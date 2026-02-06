@@ -48,48 +48,62 @@ function App() {
     setPages(totalPages);
   };
 
-  const handlePayment = async () => {
-  if (!pages || !copies) {
-    alert("Enter pages and copies");
-    return;
-  }
-
-  
-  console.log("Pages:", pages);
-  console.log("Copies:", copies);
-  console.log("Type:", printType);
-  console.log("Total ₹:", totalAmount);
-  console.log("Sending to backend:", totalAmount * 100);
-
+ const handlePayment = async (totalAmount) => {
   try {
-    const res = await axios.post("https://backend-server-9jix.onrender.com/create-order", {
-      amount: totalAmount * 100, // 🔥 Razorpay wants paise
-    });
+    // 1️⃣ Create Order via backend
+    const {data} = await axios.post(
+      "https://backend-server-9jix.onrender.com/create-order",
+      { pages: Number(pages),
+        copies: Number(copies),
+        printType
+       } // Rupees, backend will multiply by 100
+    );
 
-    const order = res.data;
+    const order = res.data; // order object from backend
+    console.log("Order received from backend:", order);
 
+    // 2️⃣ Razorpay options
     const options = {
-      key: "rzp_live_S86JCGSl30lgly",
-      amount: order.amount,
-      currency: "INR",
+      key: "rzp_live_S86JCGSl30lgly", // use your Razorpay LIVE or TEST key
+      amount: order.amount, // backend multiplied paise
+      currency: order.currency,
       name: "A4Station",
       description: "Printing Payment",
       order_id: order.id,
-      handler: function (response) {
-        console.log(response);
-        setPaymentSuccess(true);
-        generateCode(); // your 6 digit print code
+      handler: async function (response) {
+        // 3️⃣ Payment successful, verify on backend
+        console.log("Payment Success:", response);
+
+        try {
+          const verifyRes = await axios.post(
+            "https://backend-server-9jix.onrender.com/verify-payment",
+            response
+          );
+          console.log("Payment Verification Response:", verifyRes.data);
+
+          if (verifyRes.data.success) {
+            alert("Payment Successful ✅");
+            // 🔹 You can trigger print or generate invoice here
+          } else {
+            alert("Payment verification failed ❌");
+          }
+        } catch (err) {
+          console.log("Verify API Error:", err);
+          alert("Payment verification failed ❌");
+        }
       },
       theme: { color: "#3399cc" },
     };
 
+    // 4️⃣ Open Razorpay popup
     const rzp = new window.Razorpay(options);
     rzp.open();
 
   } catch (err) {
-    console.log(err);
-    alert("Payment failed");
+    console.log("Create Order API Error:", err);
+    alert("Payment failed ❌");
   }
+
 };
   return (
     <div style={{ textAlign: "center", padding: "30px" }}>
