@@ -61,6 +61,7 @@ function App() {
         order_id: order.id,
 
         handler: async function (response) {
+          console.log("Payment Success:",response);
           try {
             const verifyRes = await axios.post(
               "https://backend-server-9jix.onrender.com/verify-payment",
@@ -70,15 +71,23 @@ function App() {
                 razorpay_signature: response.razorpay_signature,
               }
             );
+            console.log("Verification:", verifyRes.data);
 
             if (verifyRes.data.success) {
-              setPaid(true);
+
+              alert("Payment Successful");
+
+              const code = Math.floor(100000 +
+                 Math.random()*900000).toString();
+              
               setPrintCode(verifyRes.data.printcode);
+              setPaid(true);
+
             } else {
               alert("Payment verification failed ❌");
             }
           } catch (err) {
-            console.log(err);
+            console.log("Verify API Error:",err);
             alert("Payment verification failed ❌");
           }
         },
