@@ -61,7 +61,7 @@ function App() {
         order_id: order.id,
 
         handler: async function (response) {
-          console.log("Payment Success:",response);
+          console.log("HANDLER CALLED",response);
           try {
             const verifyRes = await axios.post(
               "https://backend-server-9jix.onrender.com/verify-payment",
@@ -90,6 +90,16 @@ function App() {
             console.log("Verify API Error:",err);
             alert("Payment verification failed ❌");
           }
+        },
+        modal: {
+          ondismiss:function(){
+            console.log("Popup closed");
+          }
+        },
+        prefill:{
+          name: "Customer",
+          email: "test@test.com",
+          contact:"9999999999"
         },
 
         theme: { color: "#3399cc" },
