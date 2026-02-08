@@ -12,20 +12,15 @@ function App() {
   const [printType, setPrintType] = useState("bw");
   const [paid, setPaid] = useState(false);
   const [printCode, setPrintCode] = useState("");
-// 🎨 Prices
+
   const bwPrice = 5;
   const colorPrice = 10;
-
-  const pricePerPage =  printType === "color" ? colorPrice : bwPrice;
-
-  // 💰 Total calculation
+  const pricePerPage = printType === "color" ? colorPrice : bwPrice;
   const totalAmount = Number(pages) * Number(copies) * pricePerPage;
 
-  // FILE UPLOAD
   const handleFileChange = async (e) => {
     const uploadedFiles = Array.from(e.target.files).slice(0, 20);
     setFiles(uploadedFiles);
-
     let totalPages = 0;
 
     for (let file of uploadedFiles) {
@@ -48,67 +43,56 @@ function App() {
     setPages(totalPages);
   };
 
- const handlePayment = async (totalAmount) => {
-  try {
-    // 1️⃣ Create Order via backend
-    const res = await axios.post(
-      "https://backend-server-9jix.onrender.com/create-order",
-      { pages: Number(pages),
-        copies: Number(copies),
-        printType
-       } // Rupees, backend will multiply by 100
-    );
+  const handlePayment = async () => {
+    try {
+      const res = await axios.post(
+        "https://backend-server-9jix.onrender.com/create-order",
+        { pages: Number(pages), copies: Number(copies), printType }
+      );
 
-    const order = res.data; // order object from backend
-    console.log("Order received from backend:", order);
+      const order = res.data;
 
-    // 2️⃣ Razorpay options
-    const options = {
-      key: "rzp_live_S86JCGSl30lgly", // use your Razorpay LIVE or TEST key
-      amount: order.amount, // backend multiplied paise
-      currency: order.currency,
-      name: "A4Station",
-      description: "Printing Payment",
-      order_id: order.id,
-      handler: async function (response) {
-        // 3️⃣ Payment successful, verify on backend
-        console.log("Payment Success:", response);
+      const options = {
+        key: "rzp_live_S86JCGSl30lgly",
+        amount: order.amount,
+        currency: order.currency,
+        name: "A4Station",
+        description: "Printing Payment",
+        order_id: order.id,
 
-        try {
-          const verifyRes = await axios.post(
-            "https://backend-server-9jix.onrender.com/verify-payment",
-            {
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature,
+        handler: async function (response) {
+          try {
+            const verifyRes = await axios.post(
+              "https://backend-server-9jix.onrender.com/verify-payment",
+              {
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+              }
+            );
+
+            if (verifyRes.data.success) {
+              setPaid(true);
+              setPrintCode(verifyRes.data.code);
+            } else {
+              alert("Payment verification failed ❌");
             }
-          );
-          console.log("Payment Verification Response:", verifyRes.data);
-
-          if (verifyRes.data.success) {
-            alert("Payment Successful ✅");
-            // 🔹 You can trigger print or generate invoice here
-          } else {
+          } catch (err) {
             alert("Payment verification failed ❌");
           }
-        } catch (err) {
-          console.log("Verify API Error:", err);
-          alert("Payment verification failed ❌");
-        }
-      },
-      theme: { color: "#3399cc" },
-    };
+        },
 
-    // 4️⃣ Open Razorpay popup
-    const rzp = new window.Razorpay(options);
-    rzp.open();
+        theme: { color: "#3399cc" },
+      };
 
-  } catch (err) {
-    console.log("Create Order API Error:", err);
-    alert("Payment failed ❌");
-  }
+      const rzp = new window.Razorpay(options);
+      rzp.open();
 
-};
+    } catch (err) {
+      alert("Payment failed ❌");
+    }
+  };
+
   return (
     <div style={{ textAlign: "center", padding: "30px" }}>
       {!paid ? (
@@ -135,9 +119,7 @@ function App() {
           <h2>Total Amount: ₹{totalAmount}</h2>
 
           {files.length > 0 && (
-            <button onClick={()=>
-              handlePayment(totalAmount)
-            }>
+            <button style={payBtn} onClick={handlePayment}>
               Pay Now
             </button>
           )}
