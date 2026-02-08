@@ -47,7 +47,7 @@ function App() {
     try {
       const res = await axios.post(
         "https://backend-server-9jix.onrender.com/create-order",
-        { pages: Number(pages), copies: Number(copies), printType }
+        { amount: totalAmount}
       );
 
       const order = res.data;
@@ -73,11 +73,12 @@ function App() {
 
             if (verifyRes.data.success) {
               setPaid(true);
-              setPrintCode(verifyRes.data.code);
+              setPrintCode(verifyRes.data.printcode);
             } else {
               alert("Payment verification failed ❌");
             }
           } catch (err) {
+            console.log(err);
             alert("Payment verification failed ❌");
           }
         },
